@@ -12,5 +12,7 @@ hermes_agent_feishu.egg-info/top_level.txt
 tests/test_feishu.py
 tests/test_feishu_approval_buttons.py
 tests/test_feishu_bot_admission.py
+tests/test_feishu_comment.py
+tests/test_feishu_comment_rules.py
 tests/test_feishu_onboard.py
 tests/test_setup_feishu.py

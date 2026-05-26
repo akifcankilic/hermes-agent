@@ -109,7 +109,7 @@ def _inline_plugin_deps(root: Path, data: dict) -> dict:
 # PEP 517 hooks
 # ---------------------------------------------------------------------------
 
-def build_wheel(wheel_directory: str, config_settings: dict[str, Any] | None = None) -> str:
+def build_wheel(wheel_directory: str, config_settings: dict[str, Any] | None = None, metadata_directory: str | None = None) -> str:
     """Build a wheel with inlined plugin deps."""
     root = Path.cwd()
     pyproject_path = root / "pyproject.toml"
