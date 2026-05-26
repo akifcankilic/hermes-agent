@@ -2991,7 +2991,7 @@ class TestSlashEphemeralAck:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("gateway.platforms.slack.aiohttp.ClientSession", return_value=mock_session):
+        with patch("hermes_agent_slack.adapter.aiohttp.ClientSession", return_value=mock_session):
             result = await adapter.send("C_SLASH", "Queued for the next turn.")
 
         assert result.success is True
@@ -3038,7 +3038,7 @@ class TestSlashEphemeralAck:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("gateway.platforms.slack.aiohttp.ClientSession", return_value=mock_session):
+        with patch("hermes_agent_slack.adapter.aiohttp.ClientSession", return_value=mock_session):
             result = await adapter.send("C1", "Some response")
 
         # Still success — the user saw the initial ack already
@@ -3058,7 +3058,7 @@ class TestSlashEphemeralAck:
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("gateway.platforms.slack.aiohttp.ClientSession", return_value=mock_session):
+        with patch("hermes_agent_slack.adapter.aiohttp.ClientSession", return_value=mock_session):
             result = await adapter.send("C1", "Some response")
 
         assert result.success is True

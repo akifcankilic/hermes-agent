@@ -1,6 +1,7 @@
 """hermes-agent-tts: Text-to-speech tool plugin for Hermes Agent."""
 
 from hermes_agent_tts.tts_tool import (  # noqa: F401
+    BUILTIN_TTS_PROVIDERS,
     text_to_speech_tool,
     check_tts_requirements,
     _strip_markdown_for_tts,

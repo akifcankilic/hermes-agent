@@ -26,14 +26,14 @@ def mock_mistral_module():
 
 class TestGenerateMistralTts:
     def test_missing_api_key_raises_value_error(self, tmp_path, mock_mistral_module):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         output_path = str(tmp_path / "test.mp3")
         with pytest.raises(ValueError, match="MISTRAL_API_KEY"):
             _generate_mistral_tts("Hello", output_path, {})
 
     def test_successful_generation(self, tmp_path, mock_mistral_module, monkeypatch):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         audio_content = b"fake-audio-bytes"
@@ -59,7 +59,7 @@ class TestGenerateMistralTts:
     def test_response_format_from_extension(
         self, tmp_path, mock_mistral_module, monkeypatch, extension, expected_format
     ):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -75,7 +75,7 @@ class TestGenerateMistralTts:
     def test_voice_id_passed_when_configured(
         self, tmp_path, mock_mistral_module, monkeypatch
     ):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -91,7 +91,7 @@ class TestGenerateMistralTts:
     def test_default_voice_id_when_absent(
         self, tmp_path, mock_mistral_module, monkeypatch
     ):
-        from hermes_agent_tts import DEFAULT_MISTRAL_TTS_VOICE_ID, _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import DEFAULT_MISTRAL_TTS_VOICE_ID, _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -106,7 +106,7 @@ class TestGenerateMistralTts:
     def test_default_voice_id_when_empty_string(
         self, tmp_path, mock_mistral_module, monkeypatch
     ):
-        from hermes_agent_tts import DEFAULT_MISTRAL_TTS_VOICE_ID, _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import DEFAULT_MISTRAL_TTS_VOICE_ID, _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -120,7 +120,7 @@ class TestGenerateMistralTts:
         assert call_kwargs["voice_id"] == DEFAULT_MISTRAL_TTS_VOICE_ID
 
     def test_api_error_sanitized(self, tmp_path, mock_mistral_module, monkeypatch):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.side_effect = RuntimeError(
@@ -132,7 +132,7 @@ class TestGenerateMistralTts:
         assert "secret-key-in-error" not in str(exc_info.value)
 
     def test_default_model_used(self, tmp_path, mock_mistral_module, monkeypatch):
-        from hermes_agent_tts import DEFAULT_MISTRAL_TTS_MODEL, _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import DEFAULT_MISTRAL_TTS_MODEL, _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -147,7 +147,7 @@ class TestGenerateMistralTts:
     def test_model_from_config_overrides_default(
         self, tmp_path, mock_mistral_module, monkeypatch
     ):
-        from hermes_agent_tts import _generate_mistral_tts
+        from hermes_agent_tts.tts_tool import _generate_mistral_tts
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         mock_mistral_module.audio.speech.complete.return_value = MagicMock(
@@ -174,7 +174,7 @@ class TestTtsDispatcherMistral:
         """
         import json
 
-        from hermes_agent_tts import text_to_speech_tool
+        from hermes_agent_tts.tts_tool import text_to_speech_tool
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
 
@@ -192,7 +192,7 @@ class TestTtsDispatcherMistral:
         """Same disabled message regardless of SDK presence."""
         import json
 
-        from hermes_agent_tts import text_to_speech_tool
+        from hermes_agent_tts.tts_tool import text_to_speech_tool
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         with patch(
@@ -208,7 +208,7 @@ class TestTtsDispatcherMistral:
 
 class TestCheckTtsRequirementsMistral:
     def test_mistral_sdk_and_key_returns_true(self, mock_mistral_module, monkeypatch):
-        from hermes_agent_tts import check_tts_requirements
+        from hermes_agent_tts.tts_tool import check_tts_requirements
 
         monkeypatch.setenv("MISTRAL_API_KEY", "test-key")
         with patch("hermes_agent_tts.tts_tool._import_edge_tts", side_effect=ImportError), \
@@ -218,7 +218,7 @@ class TestCheckTtsRequirementsMistral:
             assert check_tts_requirements() is True
 
     def test_mistral_key_missing_returns_false(self, mock_mistral_module):
-        from hermes_agent_tts import check_tts_requirements
+        from hermes_agent_tts.tts_tool import check_tts_requirements
 
         with patch("hermes_agent_tts.tts_tool._import_edge_tts", side_effect=ImportError), \
              patch("hermes_agent_tts.tts_tool._import_elevenlabs", side_effect=ImportError), \

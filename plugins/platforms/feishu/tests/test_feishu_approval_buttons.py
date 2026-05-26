@@ -39,7 +39,7 @@ _ensure_feishu_mocks()
 
 from gateway.config import PlatformConfig
 import hermes_agent_feishu as feishu_module
-from hermes_agent_feishu import FeishuAdapter
+from hermes_agent_feishu.adapter import FeishuAdapter
 
 
 # ---------------------------------------------------------------------------

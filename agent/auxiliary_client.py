@@ -2038,7 +2038,23 @@ def _try_anthropic(explicit_api_key: str = None) -> Tuple[Optional[Any], Optiona
     build_anthropic_client = _anthropic.get("build_anthropic_client")
     resolve_anthropic_token = _anthropic.get("resolve_anthropic_token")
     if build_anthropic_client is None or resolve_anthropic_token is None:
-        return None, None
+        # Registry empty (e.g. unit tests without plugin loading) — use module directly
+        # so that mock.patch("hermes_agent_anthropic.adapter.X") still intercepts calls.
+        try:
+            import hermes_agent_anthropic.adapter as _ant_mod  # type: ignore[import]
+
+            class _ModuleNamespace:
+                """Proxy that delegates .get() to module attribute lookup (live, patchable)."""
+                def get(self, name: str, default=None):
+                    return getattr(_ant_mod, name, default)
+
+            _anthropic = _ModuleNamespace()
+            build_anthropic_client = _anthropic.get("build_anthropic_client")
+            resolve_anthropic_token = _anthropic.get("resolve_anthropic_token")
+            if build_anthropic_client is None or resolve_anthropic_token is None:
+                return None, None
+        except ImportError:
+            return None, None
 
     pool_present, entry = _select_pool_entry("anthropic")
     if pool_present:

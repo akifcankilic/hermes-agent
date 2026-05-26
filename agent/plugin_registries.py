@@ -310,6 +310,11 @@ class PluginRegistries:
         looks up specific symbols instead of importing from the plugin
         package directly.
 
+        Each callable value is stored as a *lazy module-attribute reference*
+        so that ``unittest.mock.patch("pkg.mod.fn")`` works correctly in
+        tests — the registry re-reads ``mod.fn`` on every lookup instead of
+        capturing the function object at register time.
+
         Example::
 
             registries.register_provider_services("anthropic", {
@@ -319,7 +324,45 @@ class PluginRegistries:
                 ...
             })
         """
-        self._provider_services[name] = services
+        import sys
+
+        def _make_lazy(fn: Any) -> Any:
+            """Return a lazy wrapper that re-reads fn from its module each call.
+
+            This makes mock.patch() on the module attribute work transparently —
+            the registry never caches the function object, just the reference path.
+            """
+            if not callable(fn):
+                return fn
+            module = getattr(fn, "__module__", None)
+            qualname = getattr(fn, "__qualname__", None)
+            if not module or not qualname or "." in qualname:
+                # non-simple attribute (lambda, nested fn, class method) — store directly
+                return fn
+
+            class _LazyRef:
+                __slots__ = ("_mod", "_attr", "_fallback")
+
+                def __init__(self, mod: str, attr: str, fallback: Any) -> None:
+                    self._mod = mod
+                    self._attr = attr
+                    self._fallback = fallback
+
+                def __call__(self, *args: Any, **kwargs: Any) -> Any:
+                    mod = sys.modules.get(self._mod)
+                    live = getattr(mod, self._attr, self._fallback) if mod else self._fallback
+                    return live(*args, **kwargs)
+
+                def __repr__(self) -> str:  # pragma: no cover
+                    return f"<LazyRef {self._mod}.{self._attr}>"
+
+                # Allow isinstance checks and hasattr to pass through
+                def __bool__(self) -> bool:
+                    return True
+
+            return _LazyRef(module, qualname, fn)
+
+        self._provider_services[name] = {k: _make_lazy(v) for k, v in services.items()}
 
     def get_provider_service(self, provider: str, name: str) -> Any:
         """Look up a single symbol from a provider's service namespace.

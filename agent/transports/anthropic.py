@@ -104,9 +104,10 @@ class AnthropicTransport(ProviderTransport):
                 text_parts.append(block.text)
             elif block.type == "thinking":
                 reasoning_parts.append(block.thinking)
-                block_dict = _to_plain_data(block)
-                if isinstance(block_dict, dict):
-                    reasoning_details.append(block_dict)
+                if _to_plain_data is not None:
+                    block_dict = _to_plain_data(block)
+                    if isinstance(block_dict, dict):
+                        reasoning_details.append(block_dict)
             elif block.type == "tool_use":
                 name = block.name
                 if strip_tool_prefix and name.startswith(_MCP_PREFIX):

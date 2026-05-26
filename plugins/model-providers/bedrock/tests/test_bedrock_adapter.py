@@ -41,7 +41,7 @@ class TestResolveAwsAuthEnvVar:
     """
 
     def test_prefers_bearer_token_over_access_keys_and_profile(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {
             "AWS_BEARER_TOKEN_BEDROCK": "bearer-token",
             "AWS_ACCESS_KEY_ID": "AKIA...",
@@ -51,7 +51,7 @@ class TestResolveAwsAuthEnvVar:
         assert resolve_aws_auth_env_var(env) == "AWS_BEARER_TOKEN_BEDROCK"
 
     def test_uses_access_keys_when_bearer_token_missing(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {
             "AWS_ACCESS_KEY_ID": "AKIA...",
             "AWS_SECRET_ACCESS_KEY": "secret",
@@ -60,28 +60,28 @@ class TestResolveAwsAuthEnvVar:
         assert resolve_aws_auth_env_var(env) == "AWS_ACCESS_KEY_ID"
 
     def test_requires_both_access_key_and_secret(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         # Only access key, no secret → should not match
         env = {"AWS_ACCESS_KEY_ID": "AKIA..."}
         assert resolve_aws_auth_env_var(env) != "AWS_ACCESS_KEY_ID"
 
     def test_uses_profile_when_no_keys(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {"AWS_PROFILE": "production"}
         assert resolve_aws_auth_env_var(env) == "AWS_PROFILE"
 
     def test_uses_container_credentials(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {"AWS_CONTAINER_CREDENTIALS_RELATIVE_URI": "/v2/credentials/..."}
         assert resolve_aws_auth_env_var(env) == "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"
 
     def test_uses_web_identity(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {"AWS_WEB_IDENTITY_TOKEN_FILE": "/var/run/secrets/token"}
         assert resolve_aws_auth_env_var(env) == "AWS_WEB_IDENTITY_TOKEN_FILE"
 
     def test_returns_none_when_no_aws_auth(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         # Mock botocore to return no credentials (covers EC2 IMDS fallback)
         mock_session = MagicMock()
         mock_session.get_credentials.return_value = None
@@ -91,7 +91,7 @@ class TestResolveAwsAuthEnvVar:
             assert resolve_aws_auth_env_var({}) is None
 
     def test_ignores_whitespace_only_values(self):
-        from hermes_agent_bedrock import resolve_aws_auth_env_var
+        from hermes_agent_bedrock.adapter import resolve_aws_auth_env_var
         env = {"AWS_PROFILE": "  ", "AWS_ACCESS_KEY_ID": " "}
         mock_session = MagicMock()
         mock_session.get_credentials.return_value = None
@@ -103,11 +103,11 @@ class TestResolveAwsAuthEnvVar:
 
 class TestHasAwsCredentials:
     def test_true_with_profile(self):
-        from hermes_agent_bedrock import has_aws_credentials
+        from hermes_agent_bedrock.adapter import has_aws_credentials
         assert has_aws_credentials({"AWS_PROFILE": "default"}) is True
 
     def test_false_with_empty_env(self):
-        from hermes_agent_bedrock import has_aws_credentials
+        from hermes_agent_bedrock.adapter import has_aws_credentials
         mock_session = MagicMock()
         mock_session.get_credentials.return_value = None
         with patch.dict("sys.modules", {"botocore": MagicMock(), "botocore.session": MagicMock()}):
@@ -118,17 +118,17 @@ class TestHasAwsCredentials:
 
 class TestResolveBedrocRegion:
     def test_prefers_aws_region(self):
-        from hermes_agent_bedrock import resolve_bedrock_region
+        from hermes_agent_bedrock.adapter import resolve_bedrock_region
         env = {"AWS_REGION": "eu-west-1", "AWS_DEFAULT_REGION": "us-west-2"}
         assert resolve_bedrock_region(env) == "eu-west-1"
 
     def test_falls_back_to_default_region(self):
-        from hermes_agent_bedrock import resolve_bedrock_region
+        from hermes_agent_bedrock.adapter import resolve_bedrock_region
         env = {"AWS_DEFAULT_REGION": "ap-northeast-1"}
         assert resolve_bedrock_region(env) == "ap-northeast-1"
 
     def test_defaults_to_us_east_1(self):
-        from hermes_agent_bedrock import resolve_bedrock_region
+        from hermes_agent_bedrock.adapter import resolve_bedrock_region
         from unittest.mock import patch, MagicMock
         mock_session = MagicMock()
         mock_session.get_config_variable.return_value = None
@@ -136,7 +136,7 @@ class TestResolveBedrocRegion:
             assert resolve_bedrock_region({}) == "us-east-1"
 
     def test_falls_back_to_botocore_profile_region(self):
-        from hermes_agent_bedrock import resolve_bedrock_region
+        from hermes_agent_bedrock.adapter import resolve_bedrock_region
         from unittest.mock import patch, MagicMock
         mock_session = MagicMock()
         mock_session.get_config_variable.return_value = "eu-central-1"
@@ -144,7 +144,7 @@ class TestResolveBedrocRegion:
             assert resolve_bedrock_region({}) == "eu-central-1"
 
     def test_botocore_failure_falls_back_to_us_east_1(self):
-        from hermes_agent_bedrock import resolve_bedrock_region
+        from hermes_agent_bedrock.adapter import resolve_bedrock_region
         from unittest.mock import patch
         with _mock_botocore_session(side_effect=Exception("no botocore")):
             assert resolve_bedrock_region({}) == "us-east-1"
@@ -158,7 +158,7 @@ class TestConvertToolsToConverse:
     """Test OpenAI → Bedrock Converse tool definition conversion."""
 
     def test_converts_single_tool(self):
-        from hermes_agent_bedrock import convert_tools_to_converse
+        from hermes_agent_bedrock.adapter import convert_tools_to_converse
         tools = [{
             "type": "function",
             "function": {
@@ -182,7 +182,7 @@ class TestConvertToolsToConverse:
         assert "path" in spec["inputSchema"]["json"]["properties"]
 
     def test_converts_multiple_tools(self):
-        from hermes_agent_bedrock import convert_tools_to_converse
+        from hermes_agent_bedrock.adapter import convert_tools_to_converse
         tools = [
             {"type": "function", "function": {"name": "tool_a", "description": "A", "parameters": {}}},
             {"type": "function", "function": {"name": "tool_b", "description": "B", "parameters": {}}},
@@ -193,12 +193,12 @@ class TestConvertToolsToConverse:
         assert result[1]["toolSpec"]["name"] == "tool_b"
 
     def test_empty_tools(self):
-        from hermes_agent_bedrock import convert_tools_to_converse
+        from hermes_agent_bedrock.adapter import convert_tools_to_converse
         assert convert_tools_to_converse([]) == []
         assert convert_tools_to_converse(None) == []
 
     def test_missing_parameters_gets_default(self):
-        from hermes_agent_bedrock import convert_tools_to_converse
+        from hermes_agent_bedrock.adapter import convert_tools_to_converse
         tools = [{"type": "function", "function": {"name": "noop", "description": "No-op"}}]
         result = convert_tools_to_converse(tools)
         schema = result[0]["toolSpec"]["inputSchema"]["json"]
@@ -213,7 +213,7 @@ class TestConvertMessagesToConverse:
     """Test OpenAI message format → Bedrock Converse format conversion."""
 
     def test_extracts_system_prompt(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": "Hello"},
@@ -226,7 +226,7 @@ class TestConvertMessagesToConverse:
         assert msgs[0]["role"] == "user"
 
     def test_user_message_text(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [{"role": "user", "content": "What is 2+2?"}]
         system, msgs = convert_messages_to_converse(messages)
         assert system is None
@@ -234,7 +234,7 @@ class TestConvertMessagesToConverse:
         assert msgs[0]["content"][0]["text"] == "What is 2+2?"
 
     def test_assistant_with_tool_calls(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "user", "content": "Read the file"},
             {
@@ -263,7 +263,7 @@ class TestConvertMessagesToConverse:
         assert tool_use_blocks[0]["toolUse"]["input"] == {"path": "/tmp/test.txt"}
 
     def test_tool_result_becomes_user_message(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "user", "content": "Read it"},
             {"role": "assistant", "content": None, "tool_calls": [{
@@ -283,7 +283,7 @@ class TestConvertMessagesToConverse:
         assert tr["toolResult"]["content"][0]["text"] == "file contents here"
 
     def test_merges_consecutive_user_messages(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "user", "content": "First"},
             {"role": "user", "content": "Second"},
@@ -297,7 +297,7 @@ class TestConvertMessagesToConverse:
         assert "Second" in texts
 
     def test_merges_consecutive_assistant_messages(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "user", "content": "Hi"},
             {"role": "assistant", "content": "Part 1"},
@@ -308,7 +308,7 @@ class TestConvertMessagesToConverse:
         assert len(assistant_msgs) == 1
 
     def test_first_message_must_be_user(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "assistant", "content": "I'm ready"},
             {"role": "user", "content": "Go"},
@@ -317,7 +317,7 @@ class TestConvertMessagesToConverse:
         assert msgs[0]["role"] == "user"
 
     def test_last_message_must_be_user(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "user", "content": "Hi"},
             {"role": "assistant", "content": "Hello"},
@@ -326,14 +326,14 @@ class TestConvertMessagesToConverse:
         assert msgs[-1]["role"] == "user"
 
     def test_empty_content_gets_placeholder(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [{"role": "user", "content": ""}]
         system, msgs = convert_messages_to_converse(messages)
         # Empty string should get a space placeholder
         assert msgs[0]["content"][0]["text"].strip() != "" or msgs[0]["content"][0]["text"] == " "
 
     def test_image_data_url_converted(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [{
             "role": "user",
             "content": [
@@ -351,7 +351,7 @@ class TestConvertMessagesToConverse:
         assert image_blocks[0]["image"]["format"] == "png"
 
     def test_multiple_system_messages_merged(self):
-        from hermes_agent_bedrock import convert_messages_to_converse
+        from hermes_agent_bedrock.adapter import convert_messages_to_converse
         messages = [
             {"role": "system", "content": "Rule 1"},
             {"role": "system", "content": "Rule 2"},
@@ -372,7 +372,7 @@ class TestNormalizeConverseResponse:
     """Test Bedrock Converse response → OpenAI format conversion."""
 
     def test_text_response(self):
-        from hermes_agent_bedrock import normalize_converse_response
+        from hermes_agent_bedrock.adapter import normalize_converse_response
         response = {
             "output": {
                 "message": {
@@ -392,7 +392,7 @@ class TestNormalizeConverseResponse:
         assert result.usage.total_tokens == 15
 
     def test_tool_use_response(self):
-        from hermes_agent_bedrock import normalize_converse_response
+        from hermes_agent_bedrock.adapter import normalize_converse_response
         response = {
             "output": {
                 "message": {
@@ -422,7 +422,7 @@ class TestNormalizeConverseResponse:
         assert json.loads(tool_calls[0].function.arguments) == {"path": "/tmp/test.txt"}
 
     def test_multiple_tool_calls(self):
-        from hermes_agent_bedrock import normalize_converse_response
+        from hermes_agent_bedrock.adapter import normalize_converse_response
         response = {
             "output": {
                 "message": {
@@ -441,7 +441,7 @@ class TestNormalizeConverseResponse:
         assert result.choices[0].finish_reason == "tool_calls"
 
     def test_stop_reason_mapping(self):
-        from hermes_agent_bedrock import _converse_stop_reason_to_openai
+        from hermes_agent_bedrock.adapter import _converse_stop_reason_to_openai
         assert _converse_stop_reason_to_openai("end_turn") == "stop"
         assert _converse_stop_reason_to_openai("stop_sequence") == "stop"
         assert _converse_stop_reason_to_openai("tool_use") == "tool_calls"
@@ -451,7 +451,7 @@ class TestNormalizeConverseResponse:
         assert _converse_stop_reason_to_openai("unknown_reason") == "stop"
 
     def test_empty_content(self):
-        from hermes_agent_bedrock import normalize_converse_response
+        from hermes_agent_bedrock.adapter import normalize_converse_response
         response = {
             "output": {"message": {"role": "assistant", "content": []}},
             "stopReason": "end_turn",
@@ -463,7 +463,7 @@ class TestNormalizeConverseResponse:
 
     def test_tool_calls_override_stop_finish_reason(self):
         """When tool_calls are present but stopReason is end_turn, finish_reason should be tool_calls."""
-        from hermes_agent_bedrock import normalize_converse_response
+        from hermes_agent_bedrock.adapter import normalize_converse_response
         response = {
             "output": {
                 "message": {
@@ -488,7 +488,7 @@ class TestNormalizeConverseStreamEvents:
     """Test Bedrock ConverseStream event → OpenAI format conversion."""
 
     def test_text_stream(self):
-        from hermes_agent_bedrock import normalize_converse_stream_events
+        from hermes_agent_bedrock.adapter import normalize_converse_stream_events
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
             {"contentBlockStart": {"contentBlockIndex": 0, "start": {}}},
@@ -505,7 +505,7 @@ class TestNormalizeConverseStreamEvents:
         assert result.usage.completion_tokens == 3
 
     def test_tool_use_stream(self):
-        from hermes_agent_bedrock import normalize_converse_stream_events
+        from hermes_agent_bedrock.adapter import normalize_converse_stream_events
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
             {"contentBlockStart": {"contentBlockIndex": 0, "start": {
@@ -530,7 +530,7 @@ class TestNormalizeConverseStreamEvents:
         assert json.loads(tc[0].function.arguments) == {"path": "/tmp/f"}
 
     def test_mixed_text_and_tool_stream(self):
-        from hermes_agent_bedrock import normalize_converse_stream_events
+        from hermes_agent_bedrock.adapter import normalize_converse_stream_events
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
             # Text block
@@ -553,7 +553,7 @@ class TestNormalizeConverseStreamEvents:
         assert len(result.choices[0].message.tool_calls) == 1
 
     def test_empty_stream(self):
-        from hermes_agent_bedrock import normalize_converse_stream_events
+        from hermes_agent_bedrock.adapter import normalize_converse_stream_events
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
             {"messageStop": {"stopReason": "end_turn"}},
@@ -572,7 +572,7 @@ class TestBuildConverseKwargs:
     """Test the high-level kwargs builder for Converse API calls."""
 
     def test_basic_kwargs(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         messages = [
             {"role": "system", "content": "Be helpful."},
             {"role": "user", "content": "Hi"},
@@ -588,7 +588,7 @@ class TestBuildConverseKwargs:
         assert len(kwargs["messages"]) >= 1
 
     def test_includes_tools(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         tools = [{"type": "function", "function": {
             "name": "test", "description": "Test", "parameters": {},
         }}]
@@ -600,7 +600,7 @@ class TestBuildConverseKwargs:
         assert len(kwargs["toolConfig"]["tools"]) == 1
 
     def test_includes_temperature_and_top_p(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         kwargs = build_converse_kwargs(
             model="test-model", messages=[{"role": "user", "content": "Hi"}],
             temperature=0.7, top_p=0.9,
@@ -609,7 +609,7 @@ class TestBuildConverseKwargs:
         assert kwargs["inferenceConfig"]["topP"] == 0.9
 
     def test_includes_guardrail_config(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         guardrail = {
             "guardrailIdentifier": "gr-123",
             "guardrailVersion": "1",
@@ -621,14 +621,14 @@ class TestBuildConverseKwargs:
         assert kwargs["guardrailConfig"] == guardrail
 
     def test_no_system_when_absent(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         kwargs = build_converse_kwargs(
             model="test-model", messages=[{"role": "user", "content": "Hi"}],
         )
         assert "system" not in kwargs
 
     def test_no_tool_config_when_empty(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         kwargs = build_converse_kwargs(
             model="test-model", messages=[{"role": "user", "content": "Hi"}],
             tools=[],
@@ -644,7 +644,7 @@ class TestDiscoverBedrockModels:
     """Test Bedrock model discovery with mocked AWS API calls."""
 
     def test_discovers_foundation_models(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -674,7 +674,7 @@ class TestDiscoverBedrockModels:
             "inferenceProfileSummaries": [],
         }
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1")
 
         assert len(models) == 2
@@ -683,7 +683,7 @@ class TestDiscoverBedrockModels:
         assert "amazon.nova-pro-v1:0" in ids
 
     def test_filters_inactive_models(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -702,13 +702,13 @@ class TestDiscoverBedrockModels:
         }
         mock_client.list_inference_profiles.return_value = {"inferenceProfileSummaries": []}
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1")
 
         assert len(models) == 0
 
     def test_filters_non_streaming_models(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -727,13 +727,13 @@ class TestDiscoverBedrockModels:
         }
         mock_client.list_inference_profiles.return_value = {"inferenceProfileSummaries": []}
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1")
 
         assert len(models) == 0
 
     def test_provider_filter(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -761,14 +761,14 @@ class TestDiscoverBedrockModels:
         }
         mock_client.list_inference_profiles.return_value = {"inferenceProfileSummaries": []}
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1", provider_filter=["anthropic"])
 
         assert len(models) == 1
         assert models[0]["id"] == "anthropic.claude-v2"
 
     def test_caches_results(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -785,7 +785,7 @@ class TestDiscoverBedrockModels:
         }
         mock_client.list_inference_profiles.return_value = {"inferenceProfileSummaries": []}
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             first = discover_bedrock_models("us-east-1")
             second = discover_bedrock_models("us-east-1")
 
@@ -794,7 +794,7 @@ class TestDiscoverBedrockModels:
         assert first == second
 
     def test_discovers_inference_profiles(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -810,14 +810,14 @@ class TestDiscoverBedrockModels:
             ],
         }
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1")
 
         assert len(models) == 1
         assert models[0]["id"] == "us.anthropic.claude-sonnet-4-6"
 
     def test_global_profiles_sorted_first(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
         mock_client = MagicMock()
@@ -841,16 +841,16 @@ class TestDiscoverBedrockModels:
             }],
         }
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", return_value=mock_client):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", return_value=mock_client):
             models = discover_bedrock_models("us-east-1")
 
         assert models[0]["id"] == "global.anthropic.claude-v2"
 
     def test_handles_api_error_gracefully(self):
-        from hermes_agent_bedrock import discover_bedrock_models, reset_discovery_cache
+        from hermes_agent_bedrock.adapter import discover_bedrock_models, reset_discovery_cache
         reset_discovery_cache()
 
-        with patch("agent.bedrock_adapter._get_bedrock_control_client", side_effect=Exception("No creds")):
+        with patch("hermes_agent_bedrock.adapter._get_bedrock_control_client", side_effect=Exception("No creds")):
             models = discover_bedrock_models("us-east-1")
 
         assert models == []
@@ -858,17 +858,17 @@ class TestDiscoverBedrockModels:
 
 class TestExtractProviderFromArn:
     def test_extracts_anthropic(self):
-        from hermes_agent_bedrock import _extract_provider_from_arn
+        from hermes_agent_bedrock.adapter import _extract_provider_from_arn
         arn = "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-sonnet-4-6"
         assert _extract_provider_from_arn(arn) == "anthropic"
 
     def test_extracts_amazon(self):
-        from hermes_agent_bedrock import _extract_provider_from_arn
+        from hermes_agent_bedrock.adapter import _extract_provider_from_arn
         arn = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0"
         assert _extract_provider_from_arn(arn) == "amazon"
 
     def test_returns_empty_for_invalid_arn(self):
-        from hermes_agent_bedrock import _extract_provider_from_arn
+        from hermes_agent_bedrock.adapter import _extract_provider_from_arn
         assert _extract_provider_from_arn("not-an-arn") == ""
         assert _extract_provider_from_arn("") == ""
 
@@ -879,7 +879,7 @@ class TestExtractProviderFromArn:
 
 class TestClientCache:
     def test_reset_clears_caches(self):
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             _bedrock_control_client_cache,
             reset_client_cache,
@@ -899,7 +899,7 @@ class TestStreamConverseWithCallbacks:
     """Test real-time streaming with delta callbacks."""
 
     def test_text_deltas_fire_callback(self):
-        from hermes_agent_bedrock import stream_converse_with_callbacks
+        from hermes_agent_bedrock.adapter import stream_converse_with_callbacks
         deltas = []
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
@@ -918,7 +918,7 @@ class TestStreamConverseWithCallbacks:
 
     def test_text_deltas_suppressed_when_tool_use_present(self):
         """Text deltas should NOT fire when tool_use blocks are present."""
-        from hermes_agent_bedrock import stream_converse_with_callbacks
+        from hermes_agent_bedrock.adapter import stream_converse_with_callbacks
         deltas = []
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
@@ -945,7 +945,7 @@ class TestStreamConverseWithCallbacks:
         assert len(result.choices[0].message.tool_calls) == 1
 
     def test_tool_start_callback_fires(self):
-        from hermes_agent_bedrock import stream_converse_with_callbacks
+        from hermes_agent_bedrock.adapter import stream_converse_with_callbacks
         tools_started = []
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
@@ -965,7 +965,7 @@ class TestStreamConverseWithCallbacks:
         assert tools_started == ["read_file"]
 
     def test_interrupt_stops_processing(self):
-        from hermes_agent_bedrock import stream_converse_with_callbacks
+        from hermes_agent_bedrock.adapter import stream_converse_with_callbacks
         deltas = []
         call_count = {"n": 0}
         events = {"stream": [
@@ -990,7 +990,7 @@ class TestStreamConverseWithCallbacks:
         assert len(deltas) < 3
 
     def test_reasoning_delta_callback(self):
-        from hermes_agent_bedrock import stream_converse_with_callbacks
+        from hermes_agent_bedrock.adapter import stream_converse_with_callbacks
         reasoning = []
         events = {"stream": [
             {"messageStart": {"role": "assistant"}},
@@ -1017,7 +1017,7 @@ class TestGuardrailConfig:
     """Test that guardrail configuration is correctly passed through."""
 
     def test_guardrail_included_in_kwargs(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         guardrail = {
             "guardrailIdentifier": "gr-abc123",
             "guardrailVersion": "1",
@@ -1032,7 +1032,7 @@ class TestGuardrailConfig:
         assert kwargs["guardrailConfig"] == guardrail
 
     def test_no_guardrail_when_none(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         kwargs = build_converse_kwargs(
             model="test-model",
             messages=[{"role": "user", "content": "Hi"}],
@@ -1041,7 +1041,7 @@ class TestGuardrailConfig:
         assert "guardrailConfig" not in kwargs
 
     def test_no_guardrail_when_empty_dict(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         kwargs = build_converse_kwargs(
             model="test-model",
             messages=[{"role": "user", "content": "Hi"}],
@@ -1059,41 +1059,41 @@ class TestBedrockErrorClassification:
     """Test Bedrock-specific error classification."""
 
     def test_context_overflow_validation_exception(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error(
             "ValidationException: input is too long for model"
         ) == "context_overflow"
 
     def test_context_overflow_max_tokens(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error(
             "ValidationException: exceeds the maximum number of input tokens"
         ) == "context_overflow"
 
     def test_context_overflow_stream_error(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error(
             "ModelStreamErrorException: Input is too long"
         ) == "context_overflow"
 
     def test_rate_limit_throttling(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error("ThrottlingException: Rate exceeded") == "rate_limit"
 
     def test_rate_limit_concurrent(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error("Too many concurrent requests") == "rate_limit"
 
     def test_overloaded_not_ready(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error("ModelNotReadyException") == "overloaded"
 
     def test_overloaded_timeout(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error("ModelTimeoutException") == "overloaded"
 
     def test_unknown_error(self):
-        from hermes_agent_bedrock import classify_bedrock_error
+        from hermes_agent_bedrock.adapter import classify_bedrock_error
         assert classify_bedrock_error("SomeRandomError: something went wrong") == "unknown"
 
 
@@ -1101,32 +1101,32 @@ class TestBedrockContextLength:
     """Test Bedrock model context length lookup."""
 
     def test_claude_opus_4_6(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         assert get_bedrock_context_length("anthropic.claude-opus-4-6-20250514-v1:0") == 200_000
 
     def test_claude_sonnet_versioned(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         assert get_bedrock_context_length("anthropic.claude-sonnet-4-6-20250514-v1:0") == 200_000
 
     def test_nova_pro(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         assert get_bedrock_context_length("amazon.nova-pro-v1:0") == 300_000
 
     def test_nova_micro(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         assert get_bedrock_context_length("amazon.nova-micro-v1:0") == 128_000
 
     def test_unknown_model_gets_default(self):
-        from hermes_agent_bedrock import get_bedrock_context_length, BEDROCK_DEFAULT_CONTEXT_LENGTH
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length, BEDROCK_DEFAULT_CONTEXT_LENGTH
         assert get_bedrock_context_length("unknown.model-v1:0") == BEDROCK_DEFAULT_CONTEXT_LENGTH
 
     def test_inference_profile_resolves(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         # Cross-region inference profiles contain the base model ID
         assert get_bedrock_context_length("us.anthropic.claude-sonnet-4-6") == 200_000
 
     def test_longest_prefix_wins(self):
-        from hermes_agent_bedrock import get_bedrock_context_length
+        from hermes_agent_bedrock.adapter import get_bedrock_context_length
         # "anthropic.claude-3-5-sonnet" should match before "anthropic.claude-3"
         assert get_bedrock_context_length("anthropic.claude-3-5-sonnet-20240620-v1:0") == 200_000
 
@@ -1139,39 +1139,39 @@ class TestModelSupportsToolUse:
     """Test non-tool-calling model detection."""
 
     def test_claude_supports_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("us.anthropic.claude-sonnet-4-6") is True
 
     def test_nova_supports_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("us.amazon.nova-pro-v1:0") is True
 
     def test_deepseek_v3_supports_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("deepseek.v3.2") is True
 
     def test_llama_supports_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("us.meta.llama4-scout-17b-instruct-v1:0") is True
 
     def test_deepseek_r1_no_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("us.deepseek.r1-v1:0") is False
 
     def test_deepseek_r1_alt_format_no_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("deepseek-r1") is False
 
     def test_stability_no_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("stability.stable-diffusion-xl") is False
 
     def test_embedding_no_tools(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("cohere.embed-v4") is False
 
     def test_unknown_model_defaults_to_true(self):
-        from hermes_agent_bedrock import _model_supports_tool_use
+        from hermes_agent_bedrock.adapter import _model_supports_tool_use
         assert _model_supports_tool_use("some-future-model-v1") is True
 
 
@@ -1179,7 +1179,7 @@ class TestBuildConverseKwargsToolStripping:
     """Test that tools are stripped for non-tool-calling models."""
 
     def test_tools_included_for_claude(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         tools = [{"type": "function", "function": {"name": "test", "description": "t", "parameters": {}}}]
         kwargs = build_converse_kwargs(
             model="us.anthropic.claude-sonnet-4-6",
@@ -1189,7 +1189,7 @@ class TestBuildConverseKwargsToolStripping:
         assert "toolConfig" in kwargs
 
     def test_tools_stripped_for_deepseek_r1(self):
-        from hermes_agent_bedrock import build_converse_kwargs
+        from hermes_agent_bedrock.adapter import build_converse_kwargs
         tools = [{"type": "function", "function": {"name": "test", "description": "t", "parameters": {}}}]
         kwargs = build_converse_kwargs(
             model="us.deepseek.r1-v1:0",
@@ -1207,35 +1207,35 @@ class TestIsAnthropicBedrockModel:
     """Test Claude model detection for dual-path routing."""
 
     def test_us_claude_sonnet(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("us.anthropic.claude-sonnet-4-6") is True
 
     def test_global_claude_opus(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("global.anthropic.claude-opus-4-6-v1") is True
 
     def test_bare_claude(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("anthropic.claude-haiku-4-5-20251001-v1:0") is True
 
     def test_nova_is_not_anthropic(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("us.amazon.nova-pro-v1:0") is False
 
     def test_deepseek_is_not_anthropic(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("deepseek.v3.2") is False
 
     def test_llama_is_not_anthropic(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("us.meta.llama4-scout-17b-instruct-v1:0") is False
 
     def test_mistral_is_not_anthropic(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("mistral.mistral-large-3-675b-instruct") is False
 
     def test_eu_claude(self):
-        from hermes_agent_bedrock import is_anthropic_bedrock_model
+        from hermes_agent_bedrock.adapter import is_anthropic_bedrock_model
         assert is_anthropic_bedrock_model("eu.anthropic.claude-sonnet-4-6") is True
 
 
@@ -1243,22 +1243,22 @@ class TestEmptyTextBlockFix:
     """Test that empty text blocks are replaced with space placeholders."""
 
     def test_none_content_gets_space(self):
-        from hermes_agent_bedrock import _convert_content_to_converse
+        from hermes_agent_bedrock.adapter import _convert_content_to_converse
         blocks = _convert_content_to_converse(None)
         assert blocks[0]["text"] == " "
 
     def test_empty_string_gets_space(self):
-        from hermes_agent_bedrock import _convert_content_to_converse
+        from hermes_agent_bedrock.adapter import _convert_content_to_converse
         blocks = _convert_content_to_converse("")
         assert blocks[0]["text"] == " "
 
     def test_whitespace_only_gets_space(self):
-        from hermes_agent_bedrock import _convert_content_to_converse
+        from hermes_agent_bedrock.adapter import _convert_content_to_converse
         blocks = _convert_content_to_converse("   ")
         assert blocks[0]["text"] == " "
 
     def test_real_text_preserved(self):
-        from hermes_agent_bedrock import _convert_content_to_converse
+        from hermes_agent_bedrock.adapter import _convert_content_to_converse
         blocks = _convert_content_to_converse("Hello")
         assert blocks[0]["text"] == "Hello"
 
@@ -1271,7 +1271,7 @@ class TestInvalidateRuntimeClient:
     """Per-region eviction used to discard dead/stale bedrock-runtime clients."""
 
     def test_evicts_only_the_target_region(self):
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             invalidate_runtime_client,
             reset_client_cache,
@@ -1287,7 +1287,7 @@ class TestInvalidateRuntimeClient:
         assert _bedrock_runtime_client_cache["us-west-2"] == "live-client"
 
     def test_returns_false_when_region_not_cached(self):
-        from hermes_agent_bedrock import invalidate_runtime_client, reset_client_cache
+        from hermes_agent_bedrock.adapter import invalidate_runtime_client, reset_client_cache
         reset_client_cache()
         assert invalidate_runtime_client("eu-west-1") is False
 
@@ -1297,27 +1297,27 @@ class TestIsStaleConnectionError:
 
     def test_detects_botocore_connection_closed_error(self):
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         from botocore.exceptions import ConnectionClosedError
         exc = ConnectionClosedError(endpoint_url="https://bedrock.example")
         assert is_stale_connection_error(exc) is True
 
     def test_detects_botocore_endpoint_connection_error(self):
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         from botocore.exceptions import EndpointConnectionError
         exc = EndpointConnectionError(endpoint_url="https://bedrock.example")
         assert is_stale_connection_error(exc) is True
 
     def test_detects_botocore_read_timeout(self):
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         from botocore.exceptions import ReadTimeoutError
         exc = ReadTimeoutError(endpoint_url="https://bedrock.example")
         assert is_stale_connection_error(exc) is True
 
     def test_detects_urllib3_protocol_error(self):
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         from urllib3.exceptions import ProtocolError
         exc = ProtocolError("Connection broken")
         assert is_stale_connection_error(exc) is True
@@ -1325,7 +1325,7 @@ class TestIsStaleConnectionError:
     def test_detects_library_internal_assertion_error(self):
         """A bare AssertionError raised from inside urllib3/botocore signals
         a corrupted connection-pool invariant and should trigger eviction."""
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
 
         # Fabricate an AssertionError whose traceback's last frame belongs
         # to a module named "urllib3.connectionpool". We do this by exec'ing
@@ -1341,7 +1341,7 @@ class TestIsStaleConnectionError:
 
     def test_detects_botocore_internal_assertion_error(self):
         """Same as above but for a frame inside the botocore namespace."""
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         fake_globals = {"__name__": "botocore.httpsession"}
         try:
             exec("def _boom():\n    assert False\n_boom()", fake_globals)
@@ -1353,14 +1353,14 @@ class TestIsStaleConnectionError:
     def test_ignores_application_assertion_error(self):
         """AssertionError from application code (not urllib3/botocore) should
         NOT be classified as stale — those are real test/code bugs."""
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         try:
             assert False, "test-only"  # noqa: B011
         except AssertionError as exc:
             assert is_stale_connection_error(exc) is False
 
     def test_ignores_unrelated_exceptions(self):
-        from hermes_agent_bedrock import is_stale_connection_error
+        from hermes_agent_bedrock.adapter import is_stale_connection_error
         assert is_stale_connection_error(ValueError("bad input")) is False
         assert is_stale_connection_error(KeyError("missing")) is False
 
@@ -1372,7 +1372,7 @@ class TestCallConverseInvalidatesOnStaleError:
 
     def test_converse_evicts_client_on_stale_error(self):
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             call_converse,
             reset_client_cache,
@@ -1399,7 +1399,7 @@ class TestCallConverseInvalidatesOnStaleError:
 
     def test_converse_stream_evicts_client_on_stale_error(self):
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             call_converse_stream,
             reset_client_cache,
@@ -1425,7 +1425,7 @@ class TestCallConverseInvalidatesOnStaleError:
     def test_converse_does_not_evict_on_non_stale_error(self):
         """Non-stale errors (e.g. ValidationException) leave the client cache alone."""
         pytest.importorskip("botocore", reason="botocore required for Bedrock exception tests")
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             call_converse,
             reset_client_cache,
@@ -1452,7 +1452,7 @@ class TestCallConverseInvalidatesOnStaleError:
         )
 
     def test_converse_leaves_successful_client_in_cache(self):
-        from hermes_agent_bedrock import (
+        from hermes_agent_bedrock.adapter import (
             _bedrock_runtime_client_cache,
             call_converse,
             reset_client_cache,

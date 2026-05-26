@@ -282,7 +282,7 @@ class TestPackaging:
 #   us.anthropic.claude-sonnet-4-5-20250929-v1:0
 #   apac.anthropic.claude-haiku-4-5
 #
-# ``agent.anthropic_adapter.normalize_model_name`` converts dots to hyphens
+# ``hermes_agent_anthropic.adapter.normalize_model_name`` converts dots to hyphens
 # unless the caller opts in via ``preserve_dots=True``.  Before this fix,
 # ``AIAgent._anthropic_preserve_dots`` returned False for the ``bedrock``
 # provider, so Claude-on-Bedrock requests went out with
@@ -517,7 +517,7 @@ class TestAuxiliaryClientBedrockResolution:
         monkeypatch.setenv("AWS_REGION", "us-west-2")
 
         mock_anthropic_bedrock = MagicMock()
-        with patch("agent.anthropic_adapter.build_anthropic_bedrock_client",
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_bedrock_client",
                    return_value=mock_anthropic_bedrock):
             from agent.auxiliary_client import resolve_provider_client, AnthropicAuxiliaryClient
             client, model = resolve_provider_client("bedrock", None)
@@ -533,7 +533,7 @@ class TestAuxiliaryClientBedrockResolution:
 
     def test_bedrock_returns_none_without_credentials(self, monkeypatch):
         """Without AWS credentials, Bedrock should return (None, None) gracefully."""
-        with patch("agent.bedrock_adapter.has_aws_credentials", return_value=False):
+        with patch("hermes_agent_bedrock.adapter.has_aws_credentials", return_value=False):
             from agent.auxiliary_client import resolve_provider_client
             client, model = resolve_provider_client("bedrock", None)
 
@@ -546,7 +546,7 @@ class TestAuxiliaryClientBedrockResolution:
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
         monkeypatch.setenv("AWS_REGION", "eu-central-1")
 
-        with patch("agent.anthropic_adapter.build_anthropic_bedrock_client",
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_bedrock_client",
                    return_value=MagicMock()):
             from agent.auxiliary_client import resolve_provider_client
             client, _ = resolve_provider_client("bedrock", None)
@@ -559,7 +559,7 @@ class TestAuxiliaryClientBedrockResolution:
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 
-        with patch("agent.anthropic_adapter.build_anthropic_bedrock_client",
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_bedrock_client",
                    return_value=MagicMock()):
             from agent.auxiliary_client import resolve_provider_client
             _, model = resolve_provider_client(
@@ -573,7 +573,7 @@ class TestAuxiliaryClientBedrockResolution:
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 
-        with patch("agent.anthropic_adapter.build_anthropic_bedrock_client",
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_bedrock_client",
                    return_value=MagicMock()):
             from agent.auxiliary_client import resolve_provider_client, AsyncAnthropicAuxiliaryClient
             client, model = resolve_provider_client("bedrock", None, async_mode=True)
@@ -586,7 +586,7 @@ class TestAuxiliaryClientBedrockResolution:
         monkeypatch.setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE")
         monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
 
-        with patch("agent.anthropic_adapter.build_anthropic_bedrock_client",
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_bedrock_client",
                    return_value=MagicMock()):
             from agent.auxiliary_client import resolve_provider_client
             _, model = resolve_provider_client("bedrock", None)

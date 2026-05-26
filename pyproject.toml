@@ -187,10 +187,9 @@ all = [
   "hermes-agent[vercel]",
   "hermes-agent[hindsight]",
   "hermes-agent[honcho]",
-  "hermes-agent[slack]",
-  "hermes-agent[telegram]",
-  "hermes-agent[matrix]",
-  "hermes-agent[dingtalk]",
+    "hermes-agent[slack]",
+    "hermes-agent[telegram]",
+    "hermes-agent[dingtalk]",
   "hermes-agent[feishu]",
   "hermes-agent[dashboard]",
 ]

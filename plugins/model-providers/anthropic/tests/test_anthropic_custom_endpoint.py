@@ -23,18 +23,28 @@ def _clean_env(monkeypatch):
         monkeypatch.delenv(key, raising=False)
 
 
-def _install_anthropic_adapter_mocks():
-    """Patch build_anthropic_client so the test doesn't need the SDK."""
+def _make_fake_anthropic_namespace(build_side_effect=None, build_return=None):
+    """Return a fake provider namespace dict and fake client for registry patching.
+
+    _try_custom_endpoint() resolves build_anthropic_client through
+    registries.get_provider_namespace("anthropic"), not via a direct module
+    import, so we must patch that path (not hermes_agent_anthropic.adapter).
+    """
     fake_client = MagicMock(name="anthropic_client")
-    return patch(
-        "agent.anthropic_adapter.build_anthropic_client",
-        return_value=fake_client,
-    ), fake_client
+    if build_side_effect is not None:
+        mock_build = MagicMock(side_effect=build_side_effect)
+    else:
+        mock_build = MagicMock(return_value=build_return or fake_client)
+
+    fake_ns = {"build_anthropic_client": mock_build}
+    return fake_ns, fake_client, mock_build
 
 
 def test_custom_endpoint_anthropic_messages_builds_anthropic_wrapper():
     """api_mode=anthropic_messages → returns AnthropicAuxiliaryClient, not OpenAI."""
     from agent.auxiliary_client import _try_custom_endpoint, AnthropicAuxiliaryClient
+
+    fake_ns, fake_client, _ = _make_fake_anthropic_namespace()
 
     with patch(
         "agent.auxiliary_client._resolve_custom_runtime",
@@ -46,10 +56,11 @@ def test_custom_endpoint_anthropic_messages_builds_anthropic_wrapper():
     ), patch(
         "agent.auxiliary_client._read_main_model",
         return_value="claude-sonnet-4-6",
-    ):
-        adapter_patch, fake_client = _install_anthropic_adapter_mocks()
-        with adapter_patch:
-            client, model = _try_custom_endpoint()
+    ), patch(
+        "agent.plugin_registries.registries",
+    ) as mock_reg:
+        mock_reg.get_provider_namespace.return_value = fake_ns
+        client, model = _try_custom_endpoint()
 
     assert isinstance(client, AnthropicAuxiliaryClient), (
         "Custom endpoint with api_mode=anthropic_messages must return the "
@@ -67,6 +78,7 @@ def test_custom_endpoint_anthropic_messages_falls_back_when_sdk_missing():
     from agent.auxiliary_client import _try_custom_endpoint
 
     import_error = ImportError("anthropic package not installed")
+    fake_ns, _, _ = _make_fake_anthropic_namespace(build_side_effect=import_error)
 
     with patch(
         "agent.auxiliary_client._resolve_custom_runtime",
@@ -75,9 +87,9 @@ def test_custom_endpoint_anthropic_messages_falls_back_when_sdk_missing():
         "agent.auxiliary_client._read_main_model",
         return_value="claude-sonnet-4-6",
     ), patch(
-        "agent.anthropic_adapter.build_anthropic_client",
-        side_effect=import_error,
-    ):
+        "agent.plugin_registries.registries",
+    ) as mock_reg:
+        mock_reg.get_provider_namespace.return_value = fake_ns
         client, model = _try_custom_endpoint()
 
     # Should fall back to an OpenAI-wire client rather than returning

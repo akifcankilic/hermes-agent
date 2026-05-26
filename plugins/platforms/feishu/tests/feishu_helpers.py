@@ -35,7 +35,7 @@ def make_adapter_skeleton(
     require_mention: bool = True,
     group_policy: str = "allowlist",
 ) -> Any:
-    from hermes_agent_feishu import FeishuAdapter
+    from hermes_agent_feishu.adapter import FeishuAdapter
 
     adapter = object.__new__(FeishuAdapter)
     adapter._bot_open_id = bot_open_id

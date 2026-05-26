@@ -660,7 +660,7 @@ def init_agent(
                 from agent.plugin_registries import registries
                 is_token_provider = registries.get_provider_service("azure", "is_token_provider")
 
-                if is_token_provider(effective_key):
+                if is_token_provider and is_token_provider(effective_key):
                     print("🔑 Using credentials: Microsoft Entra ID")
                 elif isinstance(effective_key, str) and len(effective_key) > 12:
                     print(f"🔑 Using token: {effective_key[:8]}...{effective_key[-4:]}")
@@ -874,7 +874,7 @@ def init_agent(
                 is_token_provider = registries.get_provider_service("azure", "is_token_provider")
 
                 key_used = client_kwargs.get("api_key", "none")
-                if is_token_provider(key_used):
+                if is_token_provider and is_token_provider(key_used):
                     print("🔑 Using credentials: Microsoft Entra ID")
                 elif isinstance(key_used, str) and key_used and key_used != "dummy-key" and len(key_used) > 12:
                     print(f"🔑 Using API key: {key_used[:8]}...{key_used[-4:]}")

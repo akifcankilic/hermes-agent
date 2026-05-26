@@ -407,6 +407,36 @@ class TestAutoVoiceReply:
 # _send_voice_reply
 # =====================================================================
 
+
+def _make_tts_provider_mock(tts_fn=None, strip_fn=None):
+    """Return a MagicMock that mimics a ToolProviderEntry for TTS.
+
+    The mock is suitable for patching
+    ``agent.plugin_registries.registries.get_tool_provider``.
+
+    Args:
+        tts_fn: Callable (or side_effect object) for text_to_speech_tool.
+                Defaults to a lambda returning an empty-success JSON string.
+        strip_fn: Callable (or side_effect) for _strip_markdown_for_tts.
+                  Defaults to identity (pass-through).
+    """
+    provider = MagicMock()
+    provider.check_fn = lambda: True
+    tts_mock = MagicMock(side_effect=tts_fn) if callable(tts_fn) or isinstance(tts_fn, Exception) else MagicMock(return_value=tts_fn or json.dumps({"success": False}))
+    if isinstance(tts_fn, type) and issubclass(tts_fn, Exception):
+        tts_mock = MagicMock(side_effect=tts_fn())
+    strip_mock = MagicMock(side_effect=strip_fn if callable(strip_fn) else (lambda t: t))
+    if strip_fn is not None and not callable(strip_fn):
+        strip_mock = MagicMock(return_value=strip_fn)
+    provider.tool_functions = {
+        "text_to_speech_tool": tts_mock,
+        "_strip_markdown_for_tts": strip_mock,
+    }
+    provider._tts_mock = tts_mock
+    provider._strip_mock = strip_mock
+    return provider
+
+
 class TestSendVoiceReply:
 
     @pytest.fixture
@@ -422,8 +452,8 @@ class TestSendVoiceReply:
 
         tts_result = json.dumps({"success": True, "file_path": "/tmp/test.ogg"})
 
-        with patch("hermes_agent_tts.tts_tool.text_to_speech_tool", return_value=tts_result), \
-             patch("hermes_agent_tts.tts_tool._strip_markdown_for_tts", side_effect=lambda t: t), \
+        tts_provider = _make_tts_provider_mock(tts_fn=tts_result, strip_fn=lambda t: t)
+        with patch("agent.plugin_registries.registries.get_tool_provider", return_value=tts_provider), \
              patch("os.path.isfile", return_value=True), \
              patch("os.unlink"), \
              patch("os.makedirs"):
@@ -448,8 +478,8 @@ class TestSendVoiceReply:
 
         tts_result = json.dumps({"success": True, "file_path": "/tmp/test.ogg"})
 
-        with patch("hermes_agent_tts.tts_tool.text_to_speech_tool", return_value=tts_result), \
-             patch("hermes_agent_tts.tts_tool._strip_markdown_for_tts", side_effect=lambda t: t), \
+        tts_provider = _make_tts_provider_mock(tts_fn=tts_result, strip_fn=lambda t: t)
+        with patch("agent.plugin_registries.registries.get_tool_provider", return_value=tts_provider), \
              patch("os.path.isfile", return_value=True), \
              patch("os.unlink"), \
              patch("os.makedirs"):
@@ -472,11 +502,11 @@ class TestSendVoiceReply:
     async def test_empty_text_after_strip_skips(self, runner):
         event = _make_event()
 
-        with patch("hermes_agent_tts.tts_tool.text_to_speech_tool") as mock_tts, \
-             patch("hermes_agent_tts.tts_tool._strip_markdown_for_tts", return_value=""):
+        tts_provider = _make_tts_provider_mock(strip_fn="")
+        with patch("agent.plugin_registries.registries.get_tool_provider", return_value=tts_provider):
             await runner._send_voice_reply(event, "```code only```")
 
-        mock_tts.assert_not_called()
+        tts_provider._tts_mock.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_tts_failure_no_crash(self, runner):
@@ -485,8 +515,8 @@ class TestSendVoiceReply:
         runner.adapters[event.source.platform] = mock_adapter
         tts_result = json.dumps({"success": False, "error": "API error"})
 
-        with patch("hermes_agent_tts.tts_tool.text_to_speech_tool", return_value=tts_result), \
-             patch("hermes_agent_tts.tts_tool._strip_markdown_for_tts", side_effect=lambda t: t), \
+        tts_provider = _make_tts_provider_mock(tts_fn=tts_result, strip_fn=lambda t: t)
+        with patch("agent.plugin_registries.registries.get_tool_provider", return_value=tts_provider), \
              patch("os.path.isfile", return_value=False), \
              patch("os.makedirs"):
             await runner._send_voice_reply(event, "Hello")
@@ -496,8 +526,8 @@ class TestSendVoiceReply:
     @pytest.mark.asyncio
     async def test_exception_caught(self, runner):
         event = _make_event()
-        with patch("hermes_agent_tts.tts_tool.text_to_speech_tool", side_effect=RuntimeError("boom")), \
-             patch("hermes_agent_tts.tts_tool._strip_markdown_for_tts", side_effect=lambda t: t), \
+        tts_provider = _make_tts_provider_mock(tts_fn=RuntimeError("boom"), strip_fn=lambda t: t)
+        with patch("agent.plugin_registries.registries.get_tool_provider", return_value=tts_provider), \
              patch("os.makedirs"):
             # Should not raise
             await runner._send_voice_reply(event, "Hello")

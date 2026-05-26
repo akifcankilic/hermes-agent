@@ -100,7 +100,7 @@ class TestMinimaxBetaHeaders:
     def _build_and_get_betas(self, api_key, base_url=None):
         """Build client, return the anthropic-beta header string."""
         from hermes_agent_anthropic import build_anthropic_client
-        with patch("agent.anthropic_adapter._anthropic_sdk") as mock_sdk:
+        with patch("hermes_agent_anthropic.adapter._anthropic_sdk") as mock_sdk:
             build_anthropic_client(api_key, base_url=base_url)
             kwargs = mock_sdk.Anthropic.call_args[1]
             headers = kwargs.get("default_headers", {})
@@ -348,9 +348,9 @@ class TestMinimaxSwitchModelCredentialGuard:
             agent._anthropic_client = MagicMock()
             agent._fallback_chain = []
 
-        with patch("agent.anthropic_adapter.build_anthropic_client") as mock_build, \
-             patch("agent.anthropic_adapter.resolve_anthropic_token", return_value="sk-ant-leaked") as mock_resolve, \
-             patch("agent.anthropic_adapter._is_oauth_token", return_value=False):
+        with patch("hermes_agent_anthropic.adapter.build_anthropic_client") as mock_build, \
+             patch("hermes_agent_anthropic.adapter.resolve_anthropic_token", return_value="sk-ant-leaked") as mock_resolve, \
+             patch("hermes_agent_anthropic.adapter._is_oauth_token", return_value=False):
 
             agent.switch_model(
                 new_model="MiniMax-M2.7",

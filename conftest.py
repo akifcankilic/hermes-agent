@@ -519,6 +519,43 @@ def pytest_configure(config):  # noqa: D401 — pytest hook
     )
 
 
+def pytest_collection_finish(session) -> None:  # noqa: D401 — pytest hook
+    """Warn when pytest is invoked directly instead of via the parallel runner.
+
+    The canonical runner (scripts/run_tests_parallel.py) spawns one
+    pytest subprocess per file, giving each a fresh Python interpreter.
+    This prevents cross-file module-level state leakage (especially the
+    plugin-registry singleton) from causing ordering-dependent failures.
+
+    Running ``pytest tests/`` directly collapses all files into one
+    process and WILL see spurious failures that don't exist in CI.
+    The runner sets HERMES_PARALLEL_RUNNER=1 in each subprocess so we
+    can detect the difference here.
+    """
+    if os.environ.get("HERMES_PARALLEL_RUNNER"):
+        return  # launched by the runner — all good
+
+    n = len(session.items)
+    if n < 50:
+        return  # single-file or tiny run — fine to use bare pytest
+
+    _YELLOW = "\033[33m"
+    _BOLD   = "\033[1m"
+    _RESET  = "\033[0m"
+    print(
+        f"\n{_BOLD}{_YELLOW}⚠  hermes-agent test suite warning{_RESET}\n"
+        f"   You're running {n} tests directly under pytest.\n"
+        f"   Cross-file module-state leakage (esp. the plugin registry\n"
+        f"   singleton) can cause ordering-dependent failures that don't\n"
+        f"   exist in CI.\n\n"
+        f"   Use the canonical runner instead:\n"
+        f"     {_BOLD}python scripts/run_tests_parallel.py{_RESET}\n\n"
+        f"   To suppress this warning (e.g. for a focused multi-file run):\n"
+        f"     {_BOLD}HERMES_PARALLEL_RUNNER=1 pytest ...{_RESET}\n",
+        file=sys.stderr,
+    )
+
+
 @pytest.fixture(autouse=True)
 def _live_system_guard(request, monkeypatch):
     """Block real os.kill / systemctl / gateway-pid scans during tests.

@@ -242,7 +242,7 @@ class TestAuxAzureFoundryEntra:
         event hook on a custom ``httpx.Client`` passed to the
         Anthropic SDK via ``http_client=``."""
         from agent import auxiliary_client as _aux
-        from agent import anthropic_adapter as _anthropic
+        from hermes_agent_anthropic import adapter as _anthropic
 
         received = {}
 
